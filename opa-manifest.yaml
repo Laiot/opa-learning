@@ -6,9 +6,7 @@ spec:
   enforcementAction: deny
   match:
     kinds:
-      - apiGroups:
-          - networking.k8s.io
-        kinds:
+      - kinds:
           - PersistentVolumeClaim
   parameters:
     global-policy:
