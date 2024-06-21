@@ -1,0 +1,38 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: denypvcmodifications
+spec:
+  crd:
+    spec:
+      names:
+        kind: DenyPvcModifications
+      validation:
+        legacySchema: true
+  targets:
+    - rego: |
+        package DenyPvcModifications
+        privileged(userInfo, allowedUsers, _) {
+          # Allow if the user is in allowedUsers.
+          username := object.get(userInfo, "username", "")
+          allowedUsers[_] == username
+        } 
+        privileged(userInfo, _, allowedGroups) {
+          # Allow if the user's groups intersect allowedGroups.
+          userGroups := object.get(userInfo, "groups", [])
+          groups := {g | g := userGroups[_]}
+          allowed := {g | g := allowedGroups[_]}
+          intersection := groups & allowed
+          count(intersection) > 0
+        }
+        violation[{"msg": msg}] {
+          params := object.get(input, "parameters", {})
+          pvcName := input.review.object.metadata.name
+          input.review.kind.kind == "PersistentVolumeClaim"
+          allowedUsers := object.get(params[pvcName], "allowedUsers", [])
+          allowedGroups := object.get(params[pvcName], "allowedGroups", [])
+          not privileged(input.review.userInfo, allowedUsers, allowedGroups)
+          msg := sprintf("User %v is not allowed to create/modify PVC %v", 
+                         [input.review.userInfo.username, pvcName])
+        }
+      target: admission.k8s.gatekeeper.sh

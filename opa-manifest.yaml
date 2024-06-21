@@ -1,0 +1,16 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: DenyPvcModifications
+metadata:
+  name: denypvcmodifications
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - networking.k8s.io
+        kinds:
+          - PersistentVolumeClaim
+  parameters:
+    global-policy:
+      allowedGroups: ["namespace-admins"]
+      allowedUsers: []
